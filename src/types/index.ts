@@ -13,7 +13,7 @@ export interface ContextEngineConfig {
   entityConfidenceThreshold?: number;
 }
 
-export type FactType = 'world' | 'experience' | 'opinion' | 'observation';
+export type FactType = 'world' | 'experience' | 'opinion' | 'observation' | 'preference' | 'decision';
 
 export interface NarrativeFact {
   id: string;

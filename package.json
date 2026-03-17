@@ -1,12 +1,15 @@
 {
-  "name": "openclaw-longterm-memory-plugin",
+  "name": "longterm-memory",
   "version": "0.1.0",
-  "openclaw": {
-    "extensions": "dist/index.js"
-  },
+  "private": true,
   "description": "OpenClaw Context Engine plugin for long-term memory management",
   "main": "dist/index.js",
   "type": "module",
+  "openclaw": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
   "scripts": {
     "build": "tsc",
     "test": "vitest run",

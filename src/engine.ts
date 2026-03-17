@@ -45,16 +45,11 @@ export class LongtermMemoryEngine implements ContextEngine {
       ownsCompaction: false, // Delegate to legacy
     };
     
-    this.config = {
-      memoryConsoleUrl: config.memoryConsoleUrl ?? 'http://localhost:3000',
-      maxNarrativeFacts: config.maxNarrativeFacts ?? 5,
-      entityConfidenceThreshold: config.entityConfidenceThreshold ?? 0.7,
-      autoReflectInterval: config.autoReflectInterval ?? 3600,
-    };
+    this.config = config;
     
     // Default: use HTTP client
     this.client = new MemoryConsoleHttpClient(
-      this.config.memoryConsoleUrl!,
+      this.config.memoryConsoleUrl ?? 'http://memory.zealot.local',
       config.apiToken ?? ''
     );
   }

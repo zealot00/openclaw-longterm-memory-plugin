@@ -7,22 +7,21 @@
  * Follows official OpenClaw plugin pattern using register(api)
  */
 
-import type { 
-  OpenClawPluginApi, 
-  ContextEngine, 
-  ContextEngineInfo
-} from "openclaw/plugin-sdk";
+import type { OpenClawPluginApi, ContextEngine, ContextEngineInfo } from "openclaw/plugin-sdk";
 import { emptyPluginConfigSchema } from "openclaw/plugin-sdk";
 import type { ContextEngineConfig, NarrativeFact, MemoryConsoleClient } from "./types/index.js";
 import { MemoryConsoleHttpClient } from "./memory-console-client.js";
-
-// Use any for messages to avoid type conflicts
-type AnyMessage = any;
+import { NarrativeFactStore } from "./fact-store.js";
+import { ContextAssembler } from "./context-assembler.js";
+import { extractMessageContent } from "./message-parser.js";
+import { extractKeyFacts } from "./fact-extractor.js";
 
 class LongtermMemoryEngine implements ContextEngine {
   readonly info: ContextEngineInfo;
   private config: ContextEngineConfig;
   private client: MemoryConsoleClient;
+  private factStore: NarrativeFactStore;
+  private contextAssembler: ContextAssembler;
   private sessionFacts: Map<string, NarrativeFact[]> = new Map();
 
   constructor(config: ContextEngineConfig) {
@@ -33,17 +32,19 @@ class LongtermMemoryEngine implements ContextEngine {
       ownsCompaction: false,
     };
     
-    this.config = {
-      memoryConsoleUrl: config.memoryConsoleUrl ?? 'http://localhost:3000',
-      maxNarrativeFacts: config.maxNarrativeFacts ?? 5,
-      entityConfidenceThreshold: config.entityConfidenceThreshold ?? 0.7,
-      autoReflectInterval: config.autoReflectInterval ?? 3600,
-    };
+    this.config = config;
     
+    // Initialize HTTP client
     this.client = new MemoryConsoleHttpClient(
-      this.config.memoryConsoleUrl!,
+      this.config.memoryConsoleUrl ?? 'http://localhost:3000',
       config.apiToken ?? ''
     );
+    
+    // Initialize fact store and assembler
+    this.factStore = new NarrativeFactStore(this.client);
+    this.contextAssembler = new ContextAssembler(this.factStore, {
+      maxFacts: this.config.maxNarrativeFacts ?? 5,
+    });
   }
 
   async bootstrap(params: {
@@ -58,64 +59,92 @@ class LongtermMemoryEngine implements ContextEngine {
   async ingest(params: {
     sessionId: string;
     sessionKey?: string;
-    message: AnyMessage;
+    message: any;
     isHeartbeat?: boolean;
   }) {
-    return { ingested: true };
+    // Skip heartbeat messages
+    if (params.isHeartbeat) {
+      return { ingested: false };
+    }
+
+    try {
+      // Extract content from message
+      const content = extractMessageContent(params.message);
+      
+      if (!content || content.length < 10) {
+        return { ingested: false };
+      }
+
+      // Extract key facts
+      const facts = extractKeyFacts(content, params.sessionId);
+
+      // Save facts to memory-console
+      for (const fact of facts) {
+        await this.factStore.addFact({
+          content: fact.content,
+          entities: fact.entities,
+          confidence: fact.confidence,
+          factType: fact.factType,
+          createdAt: fact.createdAt,
+          sessionId: fact.sessionId,
+        });
+      }
+
+      // Store locally
+      const existing = this.sessionFacts.get(params.sessionId) || [];
+      // facts already have proper types, just spread them
+      this.sessionFacts.set(params.sessionId, [...existing, ...facts] as any);
+
+      return { ingested: true };
+    } catch (error) {
+      console.warn('Failed to ingest message:', error);
+      return { ingested: false };
+    }
   }
 
   async ingestBatch(params: {
     sessionId: string;
     sessionKey?: string;
-    messages: AnyMessage[];
+    messages: any[];
     isHeartbeat?: boolean;
   }) {
-    return { ingestedCount: params.messages.length };
+    let ingestedCount = 0;
+    
+    for (const message of params.messages) {
+      const result = await this.ingest({
+        ...params,
+        message,
+      });
+      if (result.ingested) {
+        ingestedCount++;
+      }
+    }
+
+    return { ingestedCount };
   }
 
   async afterTurn(params: {
     sessionId: string;
     sessionKey?: string;
     sessionFile: string;
-    messages: AnyMessage[];
+    messages: any[];
     prePromptMessageCount: number;
     autoCompactionSummary?: string;
     isHeartbeat?: boolean;
     tokenBudget?: number;
     runtimeContext?: Record<string, unknown>;
   }): Promise<void> {
-    // No-op
+    // Could trigger background tasks here if needed
   }
 
   async assemble(params: {
     sessionId: string;
     sessionKey?: string;
-    messages: AnyMessage[];
+    messages: any[];
     tokenBudget?: number;
   }) {
-    const maxFacts = this.config.maxNarrativeFacts ?? 5;
-    
-    let facts: NarrativeFact[] = [];
-    try {
-      facts = await this.client.searchNarrativeFacts('', { limit: maxFacts });
-    } catch (error) {
-      console.warn('Failed to fetch narrative facts:', error);
-    }
-    
-    let systemPromptAddition = '';
-    if (facts.length > 0) {
-      const factLines = facts.map((f, i) => `${i + 1}. [${f.factType}] ${f.content}`).join('\n');
-      systemPromptAddition = `<relevant-facts>
-These facts from your long-term memory may be relevant:
-${factLines}
-</relevant-facts>`;
-    }
-
-    return {
-      messages: [],
-      estimatedTokens: 0,
-      systemPromptAddition,
-    };
+    // Use the context assembler
+    return this.contextAssembler.assemble(params.messages, params.sessionId);
   }
 
   async compact(params: {
@@ -161,7 +190,7 @@ const longtermMemoryPlugin = {
   
   register(api: OpenClawPluginApi) {
     api.registerContextEngine("longterm-memory", () => {
-      const config = api.pluginConfig as ContextEngineConfig;
+      const config = (api.pluginConfig ?? {}) as ContextEngineConfig;
       return new LongtermMemoryEngine(config);
     });
   },
