@@ -41,10 +41,29 @@ export class MockMemoryConsoleClient implements MemoryConsoleClient {
 
   async searchMemories(query: string, options?: SearchOptions): Promise<MemoryEntry[]> {
     const limit = options?.limit ?? 5;
-    const results = Array.from(memoryStore.values())
-      .filter(m => m.content.toLowerCase().includes(query.toLowerCase()))
-      .slice(0, limit);
-    return results;
+    let results = Array.from(memoryStore.values());
+    
+    // Filter by query
+    if (query) {
+      results = results.filter(m => 
+        m.content.toLowerCase().includes(query.toLowerCase()) ||
+        m.title.toLowerCase().includes(query.toLowerCase())
+      );
+    }
+    
+    // Filter by namespace
+    if (options?.namespace) {
+      results = results.filter(m => m.namespace === options.namespace);
+    }
+    
+    // Filter by tags
+    if (options?.tags && options.tags.length > 0) {
+      results = results.filter(m => 
+        options.tags!.some(tag => m.tags.includes(tag))
+      );
+    }
+    
+    return results.slice(0, limit);
   }
 
   async createNarrativeFact(fact: Omit<NarrativeFact, 'id'>): Promise<NarrativeFact> {
@@ -64,10 +83,18 @@ export class MockMemoryConsoleClient implements MemoryConsoleClient {
 
   async searchNarrativeFacts(query: string, options?: SearchOptions): Promise<NarrativeFact[]> {
     const limit = options?.limit ?? 5;
-    const results = Array.from(factsStore.values())
-      .filter(f => f.content.toLowerCase().includes(query.toLowerCase()))
-      .slice(0, limit);
-    return results;
+    let results = Array.from(factsStore.values());
+    
+    // Filter by query (more comprehensive)
+    if (query) {
+      const queryLower = query.toLowerCase();
+      results = results.filter(f => 
+        f.content.toLowerCase().includes(queryLower) ||
+        f.entities.some(e => e.toLowerCase().includes(queryLower))
+      );
+    }
+    
+    return results.slice(0, limit);
   }
 
   async createEntity(entity: Omit<Entity, 'id' | 'createdAt' | 'updatedAt'>): Promise<Entity> {
