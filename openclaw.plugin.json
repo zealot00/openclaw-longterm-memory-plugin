@@ -1,0 +1,50 @@
+{
+  "id": "longterm-memory",
+  "kind": "context-engine",
+  "name": "Long-term Memory Context",
+  "description": "Enhanced context engine with narrative fact retention and entity tracking",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "memoryConsoleUrl": {
+        "type": "string",
+        "default": "http://localhost:3000"
+      },
+      "apiToken": {
+        "type": "string"
+      },
+      "maxNarrativeFacts": {
+        "type": "number",
+        "default": 5
+      },
+      "autoReflectInterval": {
+        "type": "number",
+        "default": 3600
+      },
+      "entityConfidenceThreshold": {
+        "type": "number",
+        "default": 0.7
+      }
+    }
+  },
+  "uiHints": {
+    "memoryConsoleUrl": {
+      "label": "Memory Console URL",
+      "placeholder": "http://localhost:3000",
+      "help": "URL of the memory-console API"
+    },
+    "apiToken": {
+      "label": "API Token",
+      "placeholder": "dev-token-...",
+      "sensitive": true,
+      "help": "Authentication token for memory-console"
+    },
+    "maxNarrativeFacts": {
+      "label": "Max Narrative Facts",
+      "placeholder": "5",
+      "help": "Maximum facts to inject per context assembly"
+    }
+  }
+}
