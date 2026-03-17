@@ -5,47 +5,84 @@
  *   status    - Health check and efficiency stats
  */
 
-import { MemoryConsoleHttpClient } from './src/memory-console-client.js';
-import type { ContextEngineConfig } from './src/types/index.js';
-
 interface CliOptions {
   url: string;
   token: string;
+}
+
+interface MemoryEntry {
+  id: string;
+  title: string;
+  content: string;
+  namespace: string;
+  tags: string[];
+  createdAt: string;
 }
 
 async function status(options: CliOptions) {
   console.log('\n🟡 Long-term Memory Plugin Status\n');
   console.log('─────────────────────────────────\n');
 
-  const client = new MemoryConsoleHttpClient(options.url, options.token);
-
   try {
-    // Check API health
-    const entities = await client.listEntities();
-    const facts = await client.searchNarrativeFacts('', { limit: 1000 });
+    // Fetch memories
+    const response = await fetch(`${options.url}/api/memories?limit=1000`, {
+      headers: {
+        'Authorization': `Bearer ${options.token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const memories: MemoryEntry[] = data.items || [];
 
     console.log('✅ Memory Console: Connected\n');
 
     // Efficiency stats
     console.log('📊 Efficiency Statistics:\n');
-    console.log(`   Total Entities:      ${entities.length}`);
-    console.log(`   Total Facts:        ${facts.length}`);
+    console.log(`   Total Memories:    ${memories.length}`);
 
-    // Calculate average confidence
-    if (entities.length > 0) {
-      const avgConfidence = entities.reduce((sum, e) => sum + e.confidence, 0) / entities.length;
-      console.log(`   Avg Confidence:     ${(avgConfidence * 100).toFixed(1)}%`);
+    // Tag distribution
+    const tagCounts: Record<string, number> = {};
+    memories.forEach(m => {
+      m.tags?.forEach(tag => {
+        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      });
+    });
+
+    // Namespace distribution
+    const namespaceCounts: Record<string, number> = {};
+    memories.forEach(m => {
+      namespaceCounts[m.namespace || 'default'] = (namespaceCounts[m.namespace || 'default'] || 0) + 1;
+    });
+
+    // Source breakdown
+    const sourceCounts: Record<string, number> = {};
+    memories.forEach(m => {
+      const source = m.content.substring(0, 30) + (m.content.length > 30 ? '...' : '');
+      sourceCounts[m.source || 'unknown'] = (sourceCounts[m.source || 'unknown'] || 0) + 1;
+    });
+
+    console.log('\n   Namespaces:');
+    for (const [ns, count] of Object.entries(namespaceCounts)) {
+      console.log(`      ${ns}: ${count}`);
     }
 
-    // Fact types breakdown
-    const factTypes = facts.reduce((acc, f) => {
-      acc[f.factType] = (acc[f.factType] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    if (Object.keys(tagCounts).length > 0) {
+      console.log('\n   Top Tags:');
+      const sortedTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      for (const [tag, count] of sortedTags) {
+        console.log(`      ${tag}: ${count}`);
+      }
+    }
 
-    console.log('\n   Fact Types:');
-    for (const [type, count] of Object.entries(factTypes)) {
-      console.log(`      ${type}: ${count}`);
+    // Recent memories
+    console.log('\n   Recent Memories:');
+    const recent = memories.slice(0, 3);
+    for (const m of recent) {
+      console.log(`      - ${m.title || m.content.substring(0, 40)}`);
     }
 
     console.log('\n─────────────────────────────────\n');

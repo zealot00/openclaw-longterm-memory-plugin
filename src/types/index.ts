@@ -2,6 +2,9 @@
  * Internal type definitions for the plugin
  */
 
+export type { ContextEngine } from './context-engine.js';
+export type { ContextEngineInfo, AssembleResult, CompactResult, IngestResult, IngestBatchResult, BootstrapResult, SubagentSpawnPreparation, SubagentEndReason, ContextEngineRuntimeContext } from './context-engine.js';
+
 export interface ContextEngineConfig {
   memoryConsoleUrl?: string;
   apiToken?: string;

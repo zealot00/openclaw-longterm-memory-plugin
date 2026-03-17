@@ -10,7 +10,7 @@ import type {
   MemoryEntry, 
   MemoryConsoleClient,
   SearchOptions 
-} from '../types/index.js';
+} from './types/index.js';
 
 export class MemoryConsoleHttpClient implements MemoryConsoleClient {
   private baseUrl: string;
@@ -42,7 +42,8 @@ export class MemoryConsoleHttpClient implements MemoryConsoleClient {
       throw new Error(`Memory Console API error: ${response.status} ${response.statusText}`);
     }
 
-    return response.json();
+    const data = await response.json() as T;
+    return data;
   }
 
   async createMemory(memory: Omit<MemoryEntry, 'id'>): Promise<MemoryEntry> {

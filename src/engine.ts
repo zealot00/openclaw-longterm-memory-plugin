@@ -85,7 +85,7 @@ export class LongtermMemoryEngine implements ContextEngine {
   async ingestBatch(params: {
     sessionId: string;
     sessionKey?: string;
-    messages: unknown[];
+    messages: any[];
     isHeartbeat?: boolean;
   }): Promise<IngestBatchResult> {
     // TODO: Batch analyze messages for narrative facts
@@ -96,7 +96,7 @@ export class LongtermMemoryEngine implements ContextEngine {
     sessionId: string;
     sessionKey?: string;
     sessionFile: string;
-    messages: unknown[];
+    messages: any[];
     prePromptMessageCount: number;
     autoCompactionSummary?: string;
     isHeartbeat?: boolean;
@@ -110,7 +110,7 @@ export class LongtermMemoryEngine implements ContextEngine {
   async assemble(params: {
     sessionId: string;
     sessionKey?: string;
-    messages: unknown[];
+    messages: any[];
     tokenBudget?: number;
   }): Promise<AssembleResult> {
     const maxFacts = this.config.maxNarrativeFacts ?? 5;
