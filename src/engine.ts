@@ -13,14 +13,23 @@ import type {
   IngestResult,
   BootstrapResult 
 } from './types/context-engine.js';
-import type { ContextEngineConfig, NarrativeFact } from './types/index.js';
-import { MockMemoryConsoleClient } from '../tests/mocks/memory-console.js';
+import type { ContextEngineConfig, NarrativeFact, MemoryConsoleClient } from './types/index.js';
+import { MemoryConsoleHttpClient } from './memory-console-client.js';
 
 export class LongtermMemoryEngine implements ContextEngine {
   readonly info: ContextEngineInfo;
   private config: ContextEngineConfig;
-  private client: MockMemoryConsoleClient;
+  private client: MemoryConsoleClient;
   private sessionFacts: Map<string, NarrativeFact[]> = new Map();
+
+  /**
+   * Create engine with custom client (for testing)
+   */
+  static withClient(config: ContextEngineConfig, client: MemoryConsoleClient): LongtermMemoryEngine {
+    const engine = new LongtermMemoryEngine(config);
+    engine.client = client;
+    return engine;
+  }
 
   constructor(config: ContextEngineConfig) {
     this.info = {
@@ -37,8 +46,11 @@ export class LongtermMemoryEngine implements ContextEngine {
       autoReflectInterval: config.autoReflectInterval ?? 3600,
     };
     
-    // Use mock client for now; real implementation would use HTTP client
-    this.client = new MockMemoryConsoleClient();
+    // Default: use HTTP client
+    this.client = new MemoryConsoleHttpClient(
+      this.config.memoryConsoleUrl!,
+      config.apiToken ?? ''
+    );
   }
 
   async bootstrap(params: {
@@ -75,8 +87,13 @@ export class LongtermMemoryEngine implements ContextEngine {
     const maxFacts = this.config.maxNarrativeFacts ?? 5;
     
     // Query memory-console for relevant facts
-    // For now, use mock data
-    const facts = await this.client.searchNarrativeFacts('', { limit: maxFacts });
+    let facts: NarrativeFact[] = [];
+    try {
+      facts = await this.client.searchNarrativeFacts('', { limit: maxFacts });
+    } catch (error) {
+      // Fallback: log error and continue without facts
+      console.warn('Failed to fetch narrative facts:', error);
+    }
     
     // Build system prompt addition with facts
     let systemPromptAddition = '';

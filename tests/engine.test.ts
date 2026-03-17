@@ -6,6 +6,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LongtermMemoryEngine } from '../src/engine.js';
+import { MockMemoryConsoleClient } from './mocks/memory-console.js';
 import type { ContextEngineConfig } from '../src/types/index.js';
 
 describe('LongtermMemoryEngine', () => {
@@ -18,7 +19,8 @@ describe('LongtermMemoryEngine', () => {
       maxNarrativeFacts: 5,
       entityConfidenceThreshold: 0.7,
     };
-    engine = new LongtermMemoryEngine(config);
+    const mockClient = new MockMemoryConsoleClient();
+    engine = LongtermMemoryEngine.withClient(config, mockClient);
   });
 
   describe('info', () => {

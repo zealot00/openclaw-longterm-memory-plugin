@@ -21,9 +21,9 @@ describe('Engine Integration', () => {
       maxNarrativeFacts: 3,
       entityConfidenceThreshold: 0.7,
     };
-    engine = new LongtermMemoryEngine(config);
-    // Access the mock client through a getter for testing
+    // Use mock client for testing via dependency injection
     mockClient = new MockMemoryConsoleClient();
+    engine = LongtermMemoryEngine.withClient(config, mockClient);
   });
 
   describe('assemble with facts', () => {
