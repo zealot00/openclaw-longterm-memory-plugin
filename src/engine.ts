@@ -3,6 +3,8 @@
  * 
  * This engine enhances context assembly by injecting relevant
  * narrative facts and entity information into the context window.
+ * 
+ * Compatible with OpenClaw plugin-sdk/context-engine interface
  */
 
 import type { 
@@ -11,7 +13,11 @@ import type {
   AssembleResult, 
   CompactResult,
   IngestResult,
-  BootstrapResult 
+  IngestBatchResult,
+  BootstrapResult,
+  SubagentSpawnPreparation,
+  SubagentEndReason,
+  ContextEngineRuntimeContext
 } from './types/context-engine.js';
 import type { ContextEngineConfig, NarrativeFact, MemoryConsoleClient } from './types/index.js';
 import { MemoryConsoleHttpClient } from './memory-console-client.js';
@@ -36,7 +42,7 @@ export class LongtermMemoryEngine implements ContextEngine {
       id: 'longterm-memory',
       name: 'Long-term Memory Context',
       version: '0.1.0',
-      ownsCompaction: false,
+      ownsCompaction: false, // Delegate to legacy
     };
     
     this.config = {
@@ -58,7 +64,6 @@ export class LongtermMemoryEngine implements ContextEngine {
     sessionKey?: string;
     sessionFile: string;
   }): Promise<BootstrapResult> {
-    // Initialize session storage
     this.sessionFacts.set(params.sessionId, []);
     
     return {
@@ -73,9 +78,33 @@ export class LongtermMemoryEngine implements ContextEngine {
     message: unknown;
     isHeartbeat?: boolean;
   }): Promise<IngestResult> {
-    // In a real implementation, we'd analyze the message for narrative facts
-    // For now, this is a placeholder
+    // TODO: Analyze message for narrative facts and store to memory-console
     return { ingested: true };
+  }
+
+  async ingestBatch(params: {
+    sessionId: string;
+    sessionKey?: string;
+    messages: unknown[];
+    isHeartbeat?: boolean;
+  }): Promise<IngestBatchResult> {
+    // TODO: Batch analyze messages for narrative facts
+    return { ingestedCount: params.messages.length };
+  }
+
+  async afterTurn(params: {
+    sessionId: string;
+    sessionKey?: string;
+    sessionFile: string;
+    messages: unknown[];
+    prePromptMessageCount: number;
+    autoCompactionSummary?: string;
+    isHeartbeat?: boolean;
+    tokenBudget?: number;
+    runtimeContext?: ContextEngineRuntimeContext;
+  }): Promise<void> {
+    // Optional: Trigger background reflect task here
+    // For now, this is a no-op as we rely on assemble for retrieval
   }
 
   async assemble(params: {
@@ -91,7 +120,6 @@ export class LongtermMemoryEngine implements ContextEngine {
     try {
       facts = await this.client.searchNarrativeFacts('', { limit: maxFacts });
     } catch (error) {
-      // Fallback: log error and continue without facts
       console.warn('Failed to fetch narrative facts:', error);
     }
     
@@ -109,7 +137,7 @@ ${factLines}
     }
 
     return {
-      messages: [],  // Would contain actual messages in real impl
+      messages: [],
       estimatedTokens: 0,
       systemPromptAddition,
     };
@@ -124,14 +152,30 @@ ${factLines}
     currentTokenCount?: number;
     compactionTarget?: 'budget' | 'threshold';
     customInstructions?: string;
-    runtimeContext?: Record<string, unknown>;
+    runtimeContext?: ContextEngineRuntimeContext;
   }): Promise<CompactResult> {
-    // Delegate to legacy compaction
+    // Delegate to legacy compaction (ownsCompaction = false)
     return {
       ok: true,
       compacted: false,
       reason: 'Using legacy compaction',
     };
+  }
+
+  async prepareSubagentSpawn(params: {
+    parentSessionKey: string;
+    childSessionKey: string;
+    ttlMs?: number;
+  }): Promise<SubagentSpawnPreparation | undefined> {
+    // Not implemented - subagent context isolation not needed
+    return undefined;
+  }
+
+  async onSubagentEnded(params: {
+    childSessionKey: string;
+    reason: SubagentEndReason;
+  }): Promise<void> {
+    // Not implemented - cleanup if needed
   }
 
   async dispose(): Promise<void> {
