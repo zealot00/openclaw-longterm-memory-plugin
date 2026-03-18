@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { LongtermMemoryEngine } from '../src/engine.js';
+import { LongtermMemoryEngine } from '../src/index.js';
 import type { ContextEngineConfig } from '../src/types/index.js';
 import type { MemoryConsoleClient } from '../src/types/index.js';
 import type { NarrativeFact } from '../src/types/index.js';

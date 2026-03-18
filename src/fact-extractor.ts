@@ -31,13 +31,6 @@ const EXTRACTION_PATTERNS: ExtractionPattern[] = [
   { pattern: /seems|appears|looks like/i, type: 'observation', priority: 2 },
 ];
 
-// Entity patterns (simple noun phrase detection)
-const ENTITY_PATTERNS = [
-  /the\s+(\w+\s+\w+)/gi,  // "the NUC server"
-  /(\w+server|\w+database|\w+API|\w+model)/gi,
-  /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g,  // Capitalized words
-];
-
 /**
  * Extract key facts from message content
  */

@@ -16,13 +16,26 @@ import { ContextAssembler } from "./context-assembler.js";
 import { extractMessageContent } from "./message-parser.js";
 import { extractKeyFacts } from "./fact-extractor.js";
 
-class LongtermMemoryEngine implements ContextEngine {
+export class LongtermMemoryEngine implements ContextEngine {
   readonly info: ContextEngineInfo;
   private config: ContextEngineConfig;
   private client: MemoryConsoleClient;
   private factStore: NarrativeFactStore;
   private contextAssembler: ContextAssembler;
-  private sessionFacts: Map<string, NarrativeFact[]> = new Map();
+  private sessionFacts: Map<string, Omit<NarrativeFact, 'id'>[]> = new Map();
+
+  /**
+   * Create engine with custom client (for testing)
+   */
+  static withClient(config: ContextEngineConfig, client: MemoryConsoleClient): LongtermMemoryEngine {
+    const engine = new LongtermMemoryEngine(config);
+    engine.client = client;
+    engine.factStore = new NarrativeFactStore(client);
+    engine.contextAssembler = new ContextAssembler(engine.factStore, {
+      maxFacts: config.maxNarrativeFacts ?? 5,
+    });
+    return engine;
+  }
 
   constructor(config: ContextEngineConfig) {
     this.info = {
@@ -34,10 +47,13 @@ class LongtermMemoryEngine implements ContextEngine {
     
     this.config = config;
     
-    // Initialize HTTP client
+    // Initialize HTTP client with environment variable support
+    const defaultUrl = process.env.MEMORY_CONSOLE_URL ?? 'http://localhost:3000';
+    const defaultToken = process.env.MEMORY_CONSOLE_API_TOKEN ?? '';
+    
     this.client = new MemoryConsoleHttpClient(
-      this.config.memoryConsoleUrl ?? 'http://localhost:3000',
-      config.apiToken ?? ''
+      this.config.memoryConsoleUrl ?? defaultUrl,
+      config.apiToken ?? defaultToken
     );
     
     // Initialize fact store and assembler
@@ -92,8 +108,7 @@ class LongtermMemoryEngine implements ContextEngine {
 
       // Store locally
       const existing = this.sessionFacts.get(params.sessionId) || [];
-      // facts already have proper types, just spread them
-      this.sessionFacts.set(params.sessionId, [...existing, ...facts] as any);
+      this.sessionFacts.set(params.sessionId, [...existing, ...facts]);
 
       return { ingested: true };
     } catch (error) {

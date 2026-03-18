@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { LongtermMemoryEngine } from '../src/engine.js';
+import { LongtermMemoryEngine } from '../src/index.js';
 import { NarrativeFactStore } from '../src/fact-store.js';
 import { extractMessageContent } from '../src/message-parser.js';
 import { extractKeyFacts } from '../src/fact-extractor.js';

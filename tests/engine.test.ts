@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { LongtermMemoryEngine } from '../src/engine.js';
+import { LongtermMemoryEngine } from '../src/index.js';
 import { MockMemoryConsoleClient } from './mocks/memory-console.js';
 import type { ContextEngineConfig } from '../src/types/index.js';
 
@@ -89,7 +89,7 @@ describe('LongtermMemoryEngine', () => {
     it('should ingest messages', async () => {
       const result = await engine.ingest({
         sessionId: 'test-session',
-        message: { role: 'user', content: 'Hello' },
+        message: { role: 'user', content: 'I prefer using Docker for containerization' },
       });
 
       expect(result.ingested).toBe(true);

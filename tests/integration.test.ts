@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { LongtermMemoryEngine } from '../src/engine.js';
+import { LongtermMemoryEngine } from '../src/index.js';
 import { MockMemoryConsoleClient, createTestFact, resetMockStores } from './mocks/memory-console.js';
 import type { ContextEngineConfig } from '../src/types/index.js';
 

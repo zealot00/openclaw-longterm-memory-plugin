@@ -104,8 +104,7 @@ export function createMemoryConsoleClient(
   useMock: boolean = false
 ): MemoryConsoleClient {
   if (useMock) {
-    // Import dynamically to avoid issues in production
-    return new (require('./mocks/memory-console.js')).MockMemoryConsoleClient();
+    throw new Error('Mock client must be imported and instantiated directly');
   }
   return new MemoryConsoleHttpClient(baseUrl, token);
 }

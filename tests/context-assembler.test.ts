@@ -71,7 +71,8 @@ describe('ContextAssembler', () => {
       const result = await assembler.assemble([], 'test-session');
 
       expect(result.messages).toEqual([]);
-      expect(result.systemPromptAddition).toBe('');
+      // Empty messages should still return long-term memory facts
+      expect(result.systemPromptAddition).toContain('relevant-facts');
     });
 
     it('should handle store errors gracefully', async () => {

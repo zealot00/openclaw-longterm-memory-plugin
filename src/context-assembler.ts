@@ -51,31 +51,30 @@ export class ContextAssembler {
     // 3. Extract topic and search memories
     let systemPromptAddition = '';
     
-    if (messages.length > 0) {
-      try {
-        const topic = extractSessionTopic(messages);
+    // Always search for facts to provide long-term memory context
+    try {
+      const topic = messages.length > 0 ? extractSessionTopic(messages) : '';
+      
+      if (topic || messages.length === 0) {
+        const facts = await this.store.searchFacts(topic, { limit: this.maxFacts });
         
-        if (topic) {
-          const facts = await this.store.searchFacts(topic, { limit: this.maxFacts });
+        if (facts.length > 0) {
+          const factLines = facts.map((f, i) => 
+            `${i + 1}. [${f.factType}] ${f.content}`
+          ).join('\n');
           
-          if (facts.length > 0) {
-            const factLines = facts.map((f, i) => 
-              `${i + 1}. [${f.factType}] ${f.content}`
-            ).join('\n');
-            
-            systemPromptAddition = `<relevant-facts>
+          systemPromptAddition = `<relevant-facts>
 These facts from your long-term memory may be relevant:
 ${factLines}
 </relevant-facts>`;
-            
-            // Add tokens for the added content
-            totalTokens += estimateTokens(systemPromptAddition);
-          }
+          
+          // Add tokens for the added content
+          totalTokens += estimateTokens(systemPromptAddition);
         }
-      } catch (error) {
-        // Log error but don't fail the assembly
-        console.warn('Failed to retrieve memories:', error);
       }
+    } catch (error) {
+      // Log error but don't fail the assembly
+      console.warn('Failed to retrieve memories:', error);
     }
 
     return {
